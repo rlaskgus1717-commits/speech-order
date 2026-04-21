@@ -232,6 +232,19 @@
       padding: 1px 5px; border-radius: 10px;
     }
 
+    .btn-results {
+      flex-shrink: 0;
+      background: rgba(59,91,219,0.35);
+      border: 1px solid rgba(100,130,255,0.4);
+      color: rgba(180,200,255,0.9);
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-family: inherit; font-size: 11px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-results:hover { background: rgba(59,91,219,0.6); }
+
     .btn-reset {
       flex-shrink: 0;
       background: none;
@@ -342,6 +355,7 @@
 
 <div class="bottom-bar">
   <div class="picked-chips" id="picked-chips"></div>
+  <a href="results.html" target="_blank" class="btn-results">결과 확인 →</a>
   <button class="btn-reset" onclick="resetAll()">처음부터 다시</button>
 </div>
 
@@ -487,7 +501,8 @@ function onPick(idx, card) {
     document.getElementById(`fna-${idx}`).textContent = name;
     document.getElementById('remaining-count').textContent = TOTAL - pickCount;
 
-    pickedLog.push({ name, number: num });
+    pickedLog.push({ name, number: num, celeb: celeb.name });
+    saveResults();
     renderChips();
 
     setTimeout(() => {
@@ -497,6 +512,10 @@ function onPick(idx, card) {
       isAnim = false;
     }, 420);
   });
+}
+
+function saveResults() {
+  localStorage.setItem('speech_order_results', JSON.stringify(pickedLog));
 }
 
 function renderChips() {
@@ -539,6 +558,7 @@ function resetAll() {
   pickCount = 0;
   isAnim    = false;
   pickedLog = [];
+  saveResults();
   document.getElementById('remaining-count').textContent = TOTAL;
   document.getElementById('picked-chips').innerHTML = '';
   document.getElementById('done-banner').style.display = 'none';
