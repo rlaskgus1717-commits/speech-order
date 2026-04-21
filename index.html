@@ -5,227 +5,126 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>연설 순서 뽑기</title>
   <style>
-    :root { --radius: 14px; --accent: #3b5bdb; }
+    :root { --radius: 12px; --gap: 7px; }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     body {
       font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
-      background: radial-gradient(ellipse at 50% 40%, #1c2f5e 0%, #0d1b36 60%, #060e20 100%);
+      background: radial-gradient(ellipse at 50% 35%, #1c2f5e 0%, #0d1b36 55%, #060e20 100%);
       height: 100dvh;
       color: #fff;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
     }
 
-    /* ════════════════════════════════
-       화면 1 — 이름 입력
-    ════════════════════════════════ */
-    #screen-name {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0;
-      padding: 32px 24px;
-      animation: fadeIn 0.35s ease;
+    /* ── 헤더 ──────────────────────────────────────── */
+    header {
+      flex-shrink: 0;
+      text-align: center;
+      padding: 10px 16px 6px;
     }
-
-    #screen-name .title {
-      font-size: clamp(15px, 2.4vw, 22px);
+    header h1 {
+      font-size: clamp(13px, 2vw, 20px);
       letter-spacing: 3px;
       font-weight: bold;
-      opacity: 0.7;
-      margin-bottom: 6px;
+      opacity: 0.75;
     }
 
-    #screen-name .progress {
-      font-size: clamp(13px, 1.8vw, 16px);
-      color: #7dd3fc;
-      margin-bottom: 36px;
+    /* ── 이름 입력 바 ────────────────────────────── */
+    .name-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 16px 4px;
     }
 
-    #screen-name .prompt {
-      font-size: clamp(20px, 3.5vw, 34px);
-      font-weight: bold;
-      margin-bottom: 24px;
-      text-align: center;
-      line-height: 1.4;
+    .input-wrap {
+      flex: 1;
+      position: relative;
     }
 
     #name-input {
       width: 100%;
-      max-width: 460px;
-      padding: 18px 24px;
-      font-size: clamp(22px, 4vw, 36px);
+      padding: 11px 16px;
+      font-size: clamp(16px, 2.4vw, 22px);
       font-family: inherit;
       font-weight: bold;
-      text-align: center;
       background: rgba(255,255,255,0.1);
-      border: 2.5px solid rgba(255,255,255,0.25);
-      border-radius: 18px;
+      border: 2px solid rgba(255,255,255,0.22);
+      border-radius: 12px;
       color: #fff;
       outline: none;
-      transition: border-color 0.2s, background 0.2s;
-      letter-spacing: 2px;
-      margin-bottom: 20px;
-    }
-    #name-input:focus {
-      border-color: rgba(255,255,255,0.7);
-      background: rgba(255,255,255,0.15);
-    }
-    #name-input::placeholder { color: rgba(255,255,255,0.25); font-weight: normal; letter-spacing: 0; }
-
-    .name-error {
-      font-size: 13px;
-      color: #fca5a5;
-      margin-top: -12px;
-      margin-bottom: 14px;
-      min-height: 18px;
-      transition: opacity 0.2s;
-    }
-
-    #btn-start {
-      width: 100%;
-      max-width: 460px;
-      padding: 18px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 18px;
-      font-size: clamp(18px, 3vw, 26px);
-      font-family: inherit;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.12s, opacity 0.2s;
+      transition: border-color 0.2s;
       letter-spacing: 1px;
     }
-    #btn-start:active  { transform: scale(0.97); }
-    #btn-start:hover   { background: #2f4ac4; }
+    #name-input:focus       { border-color: rgba(255,255,255,0.6); }
+    #name-input::placeholder { color: rgba(255,255,255,0.28); font-weight: normal; }
+    #name-input.error       { border-color: #f87171; }
 
-    /* 이미 뽑은 학생 목록 */
-    .picked-list {
-      margin-top: 32px;
-      max-width: 460px;
-      width: 100%;
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%     { transform: translateX(-8px); }
+      40%     { transform: translateX(8px); }
+      60%     { transform: translateX(-5px); }
+      80%     { transform: translateX(5px); }
     }
-    .picked-list .list-title {
-      font-size: 12px;
-      opacity: 0.4;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-      text-align: center;
-    }
-    .picked-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: center;
-      max-height: 100px;
-      overflow-y: auto;
-    }
-    .chip {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px 4px 5px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 20px;
-      font-size: 12px;
-      color: rgba(255,255,255,0.75);
-    }
-    .chip-num {
-      background: #2f9e44;
-      color: #fff;
-      font-weight: bold;
+    #name-input.shake { animation: shake 0.38s ease; }
+
+    .name-hint {
+      position: absolute;
+      bottom: -18px;
+      left: 4px;
       font-size: 11px;
-      padding: 1px 6px;
-      border-radius: 12px;
+      color: #fca5a5;
+      white-space: nowrap;
+      pointer-events: none;
     }
 
-    /* ════════════════════════════════
-       화면 2 — 카드 그리드
-    ════════════════════════════════ */
-    #screen-grid {
-      flex: 1;
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .grid-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 18px 8px;
+    .meta-col {
       flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
     }
-
-    #btn-back {
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      color: rgba(255,255,255,0.7);
-      padding: 8px 16px;
-      border-radius: 10px;
-      font-family: inherit;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    #btn-back:hover  { background: rgba(255,255,255,0.18); }
-    #btn-back:active { transform: scale(0.97); }
-
-    .grid-header .center-info {
-      text-align: center;
-      flex: 1;
-    }
-    .grid-header .center-info .student-name {
-      font-size: clamp(18px, 3vw, 28px);
-      font-weight: bold;
-      letter-spacing: 1px;
-    }
-    .grid-header .center-info .pick-hint {
-      font-size: clamp(11px, 1.5vw, 14px);
-      opacity: 0.5;
-      margin-top: 2px;
-    }
-
-    .remaining-badge {
+    .remaining {
       font-size: 13px;
-      padding: 6px 12px;
-      background: rgba(255,255,255,0.07);
+      padding: 5px 12px;
+      background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 20px;
-      white-space: nowrap;
       color: #7dd3fc;
+      white-space: nowrap;
     }
 
-    /* 카드 그리드 */
+    /* ── 카드 그리드 ──────────────────────────────── */
     .grid-wrap {
       flex: 1;
-      padding: 4px 14px 14px;
+      padding: 18px 14px 8px;
+      min-height: 0;
       display: flex;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
-      overflow: hidden;
     }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
-      gap: clamp(5px, 0.85vw, 9px);
+      grid-template-rows: repeat(5, 1fr);
+      gap: var(--gap);
       width: 100%;
-      max-width: 920px;
+      max-width: 940px;
     }
 
-    /* ── 카드 ─────────────────────── */
+    /* ── 카드 ──────────────────────────────────────── */
     .card {
       perspective: 700px;
-      aspect-ratio: 3/4;
       cursor: pointer;
       user-select: none;
+      min-width: 0;
+      min-height: 0;
     }
     .card.done { cursor: default; pointer-events: none; }
 
@@ -233,7 +132,7 @@
       width: 100%; height: 100%;
       position: relative;
       transform-style: preserve-3d;
-      transition: transform 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.72s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .card.flipped .card-inner { transform: rotateY(180deg); }
 
@@ -247,56 +146,106 @@
       align-items: center; justify-content: center;
     }
 
+    /* 뒷면 — 연예인 사진 */
     .card-back {
       background: #1c2f5e;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.45);
-      transition: transform 0.18s, box-shadow 0.18s;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+      transition: transform 0.16s, box-shadow 0.16s;
     }
     .card:not(.done):not(.flipped):active .card-back {
-      transform: scale(0.95);
+      transform: scale(0.94);
     }
     .card-back img {
       width: 100%; height: 100%;
       object-fit: cover; display: block;
     }
-    .card-back .name-bar {
+    .card-back .name-bar-inner {
       position: absolute; bottom: 0; left: 0; right: 0;
-      background: linear-gradient(transparent, rgba(0,0,0,0.78));
-      padding: 14px 6px 6px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.76));
+      padding: 12px 4px 4px;
       text-align: center;
-      font-size: clamp(8px, 1.1vw, 12px);
+      font-size: clamp(7px, 1vw, 11px);
       font-weight: bold; color: #fff;
     }
 
+    /* 앞면 — 번호 */
     .card-front {
       background: #fff;
       transform: rotateY(180deg);
-      gap: 2px; padding: 6px;
+      gap: 1px; padding: 4px;
     }
     .card-front .f-num {
-      font-size: clamp(22px, 4vw, 40px);
+      font-size: clamp(18px, 3.5vw, 36px);
       font-weight: bold; color: #0d1b36; line-height: 1;
     }
     .card-front .f-name {
-      font-size: clamp(7px, 1.1vw, 10px);
-      color: #666; max-width: 90%;
+      font-size: clamp(6px, 0.9vw, 10px);
+      color: #666; max-width: 92%;
       overflow: hidden; white-space: nowrap;
       text-overflow: ellipsis; text-align: center;
     }
 
-    /* 선택 중 */
-    .card.picking { animation: card-bounce 0.42s ease-in-out infinite; pointer-events: none; }
+    /* 선택 중 글로우 */
+    .card.picking { animation: card-bounce 0.4s ease-in-out infinite; pointer-events: none; }
     .card.picking .card-back {
-      box-shadow: 0 0 0 3px #ffd700, 0 0 24px 8px rgba(255,215,0,0.45), 0 8px 24px rgba(0,0,0,0.5);
+      box-shadow: 0 0 0 3px #ffd700, 0 0 20px 6px rgba(255,215,0,0.4), 0 6px 20px rgba(0,0,0,0.5);
     }
     @keyframes card-bounce {
       0%, 100% { transform: translateY(0) scale(1); }
-      50%       { transform: translateY(-7px) scale(1.06); }
+      50%       { transform: translateY(-6px) scale(1.05); }
     }
 
-    /* ════════════════════════════════
-       대공개 오버레이
-    ════════════════════════════════ */
+    /* ── 하단 (뽑은 학생 + 초기화) ──────────────── */
+    .bottom-bar {
+      flex-shrink: 0;
+      padding: 4px 14px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+    }
+
+    .picked-chips {
+      flex: 1;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 5px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .picked-chips::-webkit-scrollbar { height: 3px; }
+    .picked-chips::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+    .chip {
+      display: flex; align-items: center; gap: 4px;
+      padding: 3px 8px 3px 4px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 20px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chip .chip-num {
+      background: #2f9e44; color: #fff;
+      font-weight: bold; font-size: 10px;
+      padding: 1px 5px; border-radius: 10px;
+    }
+
+    .btn-reset {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.3);
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-family: inherit; font-size: 11px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-reset:hover { color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.3); }
+
+    /* ── 대공개 오버레이 ───────────────────────── */
     .overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(0,0,0,0.82);
@@ -306,126 +255,96 @@
 
     .reveal-box {
       background: #fff; border-radius: 28px;
-      padding: clamp(24px, 4vw, 44px) clamp(32px, 6vw, 64px);
+      padding: clamp(22px, 4vw, 42px) clamp(30px, 6vw, 62px);
       text-align: center;
-      animation: boxPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: boxPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
       box-shadow: 0 24px 70px rgba(0,0,0,0.6);
       max-width: 90vw;
       display: flex; flex-direction: column; align-items: center;
     }
     @keyframes boxPop {
-      from { transform: scale(0.4) rotate(-6deg); opacity: 0; }
+      from { transform: scale(0.4) rotate(-5deg); opacity: 0; }
       to   { transform: scale(1)   rotate(0deg);  opacity: 1; }
     }
 
     .r-celeb-img {
-      width: clamp(80px, 13vw, 128px);
-      height: clamp(80px, 13vw, 128px);
+      width: clamp(72px, 12vw, 120px);
+      height: clamp(72px, 12vw, 120px);
       border-radius: 50%; object-fit: cover;
-      border: 4px solid #e2e8f0;
-      margin-bottom: 8px;
-      animation: imgPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+      border: 4px solid #e2e8f0; margin-bottom: 8px;
+      animation: imgPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
     }
     @keyframes imgPop {
       from { transform: scale(0); opacity: 0; }
       to   { transform: scale(1); opacity: 1; }
     }
 
-    .r-label { font-size: clamp(11px, 1.6vw, 14px); color: #999; letter-spacing: 2px; font-weight: bold; }
+    .r-label { font-size: 13px; color: #999; letter-spacing: 2px; font-weight: bold; }
     .r-num {
-      font-size: clamp(76px, 14vw, 136px);
+      font-size: clamp(72px, 14vw, 130px);
       font-weight: bold; color: #0d1b36; line-height: 1;
-      animation: numZoom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+      animation: numZoom 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.14s both;
     }
     @keyframes numZoom {
       from { transform: scale(0.3); opacity: 0; }
       to   { transform: scale(1);   opacity: 1; }
     }
-    .r-name { font-size: clamp(16px, 3vw, 28px); font-weight: bold; color: #222; }
-    .r-sub  { font-size: clamp(11px, 1.5vw, 14px); color: #aaa; margin-top: 3px; }
+    .r-name { font-size: clamp(16px, 3vw, 26px); font-weight: bold; color: #222; }
+    .r-sub  { font-size: clamp(11px, 1.5vw, 13px); color: #aaa; margin-top: 2px; }
 
     .btn-confirm {
-      margin-top: 22px;
-      padding: 14px 40px;
-      background: var(--accent);
-      color: #fff; border: none; border-radius: 14px;
-      font-size: clamp(15px, 2vw, 18px);
+      margin-top: 20px; padding: 13px 38px;
+      background: #1c3faa; color: #fff; border: none;
+      border-radius: 14px;
+      font-size: clamp(14px, 2vw, 17px);
       font-family: inherit; font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      cursor: pointer; transition: background 0.2s, transform 0.1s;
     }
-    .btn-confirm:hover  { background: #2f4ac4; }
+    .btn-confirm:hover  { background: #1438c8; }
     .btn-confirm:active { transform: scale(0.97); }
 
-    /* 완료 배너 */
     .done-banner {
       display: none; position: fixed;
-      top: 18px; left: 50%; transform: translateX(-50%);
+      top: 16px; left: 50%; transform: translateX(-50%);
       background: #2f9e44; color: #fff;
-      padding: 11px 26px; border-radius: 30px;
-      font-size: 15px; font-weight: bold;
+      padding: 10px 24px; border-radius: 30px;
+      font-size: 14px; font-weight: bold;
       z-index: 300; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
 
-    /* 리셋 */
-    .btn-reset-wrap { text-align: center; padding: 6px 0 10px; flex-shrink: 0; }
-    .btn-reset {
-      background: none; border: none;
-      color: rgba(255,255,255,0.2);
-      font-family: inherit; font-size: 12px;
-      cursor: pointer; transition: color 0.2s;
-    }
-    .btn-reset:hover { color: rgba(255,255,255,0.55); }
-
     #confetti-canvas { position: fixed; inset: 0; z-index: 190; pointer-events: none; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
   </style>
 </head>
 <body>
 
-<!-- ══ 화면 1: 이름 입력 ══ -->
-<div id="screen-name">
-  <div class="title">화법과 작문 — 연설 순서 뽑기</div>
-  <div class="progress" id="progress-text">아직 아무도 뽑지 않았어요</div>
+<header>
+  <h1>화법과 작문 — 연설 순서 뽑기</h1>
+</header>
 
-  <div class="prompt">이름을 입력하고<br>카드를 뽑으세요</div>
-
-  <input type="text" id="name-input" placeholder="학생 이름" maxlength="10" autocomplete="off"
-         oninput="onNameInput()" onkeydown="if(event.key==='Enter') tryStart()">
-  <div class="name-error" id="name-error"></div>
-  <button id="btn-start" onclick="tryStart()">뽑기 시작 →</button>
-
-  <div class="picked-list" id="picked-list" style="display:none">
-    <div class="list-title">이미 뽑은 학생</div>
-    <div class="picked-chips" id="picked-chips"></div>
+<div class="name-bar">
+  <div class="input-wrap">
+    <input type="text" id="name-input"
+           placeholder="이름을 입력하고 카드를 선택하세요"
+           maxlength="10" autocomplete="off"
+           enterkeyhint="done"
+           oninput="clearNameError()"
+           onkeydown="if(event.key==='Enter') this.blur()">
+    <div class="name-hint" id="name-hint"></div>
+  </div>
+  <div class="meta-col">
+    <div class="remaining">남은 번호 <b id="remaining-count">30</b></div>
   </div>
 </div>
 
-<!-- ══ 화면 2: 카드 그리드 ══ -->
-<div id="screen-grid">
-  <div class="grid-header">
-    <button id="btn-back" onclick="goBack()">← 뒤로</button>
-    <div class="center-info">
-      <div class="student-name" id="current-name"></div>
-      <div class="pick-hint">카드를 하나 선택하세요</div>
-    </div>
-    <div class="remaining-badge">남은 번호 <b id="remaining-count">30</b></div>
-  </div>
-
-  <div class="grid-wrap">
-    <div class="grid" id="grid"></div>
-  </div>
-
-  <div class="btn-reset-wrap">
-    <button class="btn-reset" onclick="resetAll()">처음부터 다시</button>
-  </div>
+<div class="grid-wrap">
+  <div class="grid" id="grid"></div>
 </div>
 
-<!-- ══ 오버레이 ══ -->
+<div class="bottom-bar">
+  <div class="picked-chips" id="picked-chips"></div>
+  <button class="btn-reset" onclick="resetAll()">처음부터 다시</button>
+</div>
+
 <div class="overlay" id="overlay">
   <div class="reveal-box">
     <img class="r-celeb-img" id="r-img" src="" alt="">
@@ -476,20 +395,18 @@ const ALL_CELEBS = [
   { src: 'images/희승.jpg',   name: '희승'   },
 ];
 
-let numbers    = shuffle(Array.from({length: TOTAL}, (_, i) => i + 1));
-let cardCeleb  = shuffle([...ALL_CELEBS]);
-let revealed   = new Array(TOTAL).fill(false);
-let pickCount  = 0;
-let isAnim     = false;
-let audioCtx   = null;
-let pickedLog  = []; // { name, number, celeb }
-let currentName = '';
+let numbers   = shuffle(Array.from({length: TOTAL}, (_, i) => i + 1));
+let cardCeleb = shuffle([...ALL_CELEBS]);
+let revealed  = new Array(TOTAL).fill(false);
+let pickCount = 0;
+let isAnim    = false;
+let audioCtx  = null;
+let pickedLog = [];
 
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
 }
-
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -499,73 +416,33 @@ function shuffle(arr) {
   return a;
 }
 
-// ── 이름 입력 화면 ───────────────────────────────────────
-function onNameInput() {
-  document.getElementById('name-error').textContent = '';
+// ── 이름 검사 ────────────────────────────────────────────
+function checkName() {
+  const val = document.getElementById('name-input').value.trim();
+  if (val) return val;
+
+  const inp = document.getElementById('name-input');
+  inp.classList.remove('shake');
+  inp.classList.add('error');
+  void inp.offsetWidth; // reflow for re-trigger
+  inp.classList.add('shake');
+  document.getElementById('name-hint').textContent = '이름을 먼저 입력해주세요.';
+  inp.focus();
+  return null;
+}
+function clearNameError() {
+  document.getElementById('name-input').classList.remove('error');
+  document.getElementById('name-hint').textContent = '';
 }
 
-function tryStart() {
-  const name = document.getElementById('name-input').value.trim();
-  if (!name) {
-    document.getElementById('name-error').textContent = '이름을 입력해야 뽑기를 시작할 수 있어요.';
-    document.getElementById('name-input').focus();
-    return;
-  }
-  currentName = name;
-  showGrid();
-}
-
-function showNameScreen() {
-  document.getElementById('screen-grid').style.display = 'none';
-  document.getElementById('screen-name').style.display = 'flex';
-  document.getElementById('name-input').value = '';
-  document.getElementById('name-error').textContent = '';
-  document.getElementById('btn-back').disabled = false;
-  updateProgressUI();
-  setTimeout(() => document.getElementById('name-input').focus(), 150);
-}
-
-function showGrid() {
-  document.getElementById('screen-name').style.display = 'none';
-  document.getElementById('screen-grid').style.display = 'flex';
-  document.getElementById('current-name').textContent = currentName;
-}
-
-function goBack() {
-  if (isAnim) return;
-  showNameScreen();
-}
-
-function updateProgressUI() {
-  const el = document.getElementById('progress-text');
-  if (pickCount === 0) {
-    el.textContent = '아직 아무도 뽑지 않았어요';
-  } else {
-    el.textContent = `${pickCount}명 완료 · 남은 번호 ${TOTAL - pickCount}개`;
-  }
-
-  // 뽑은 학생 칩
-  const listWrap = document.getElementById('picked-list');
-  const chips    = document.getElementById('picked-chips');
-  if (pickedLog.length === 0) {
-    listWrap.style.display = 'none';
-    return;
-  }
-  listWrap.style.display = 'block';
-  chips.innerHTML = pickedLog.map(p =>
-    `<div class="chip"><span class="chip-num">${p.number}</span>${p.name}</div>`
-  ).join('');
-}
-
-// ── 그리드 생성 ─────────────────────────────────────────
+// ── 그리드 생성 ──────────────────────────────────────────
 function buildGrid() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
   for (let i = 0; i < TOTAL; i++) {
     const celeb = cardCeleb[i];
     const card  = document.createElement('div');
-    card.className = 'card';
-    card.id = `card-${i}`;
+    card.className = 'card' + (revealed[i] ? ' flipped done' : '');
     card.innerHTML = `
       <div class="card-inner">
         <div class="card-front">
@@ -574,23 +451,26 @@ function buildGrid() {
         </div>
         <div class="card-back">
           <img src="${celeb.src}" alt="${celeb.name}" loading="lazy">
-          <div class="name-bar">${celeb.name}</div>
+          <div class="name-bar-inner">${celeb.name}</div>
         </div>
       </div>`;
-    if (revealed[i]) card.classList.add('flipped', 'done');
+    if (revealed[i]) {
+      document.getElementById && setTimeout(() => {
+        const fn = document.getElementById(`fn-${i}`);
+        if (fn) fn.textContent = numbers[i];
+      }, 0);
+    }
     card.addEventListener('click', () => onPick(i, card));
     grid.appendChild(card);
   }
-  document.getElementById('remaining-count').textContent = TOTAL - pickCount;
 }
 
 // ── 카드 선택 ────────────────────────────────────────────
 function onPick(idx, card) {
   if (isAnim || revealed[idx]) return;
+  const name = checkName();
+  if (!name) return;
   isAnim = true;
-
-  // 뒤로 가기 비활성
-  document.getElementById('btn-back').disabled = true;
 
   const num   = numbers[idx];
   const celeb = cardCeleb[idx];
@@ -604,25 +484,32 @@ function onPick(idx, card) {
     pickCount++;
 
     document.getElementById(`fn-${idx}`).textContent  = num;
-    document.getElementById(`fna-${idx}`).textContent = currentName;
+    document.getElementById(`fna-${idx}`).textContent = name;
     document.getElementById('remaining-count').textContent = TOTAL - pickCount;
 
-    pickedLog.push({ name: currentName, number: num, celeb });
+    pickedLog.push({ name, number: num });
+    renderChips();
 
     setTimeout(() => {
-      showReveal(num, celeb);
+      showReveal(num, name, celeb);
       playFanfare();
       launchConfetti();
       isAnim = false;
-    }, 450);
+    }, 420);
   });
 }
 
+function renderChips() {
+  document.getElementById('picked-chips').innerHTML = pickedLog.map(p =>
+    `<div class="chip"><span class="chip-num">${p.number}</span>${p.name}</div>`
+  ).join('');
+}
+
 // ── 오버레이 ─────────────────────────────────────────────
-function showReveal(num, celeb) {
+function showReveal(num, name, celeb) {
   document.getElementById('r-img').src = celeb.src;
   document.getElementById('r-num').textContent  = num;
-  document.getElementById('r-name').textContent = currentName;
+  document.getElementById('r-name').textContent = name;
   document.getElementById('r-sub').textContent  = `${num}번째 연설자로 선정되었습니다!`;
   document.getElementById('overlay').classList.add('active');
 }
@@ -637,62 +524,64 @@ function closeReveal() {
     setTimeout(() => b.style.display = 'none', 4000);
   }
 
-  showNameScreen();
+  const inp = document.getElementById('name-input');
+  inp.value = '';
+  clearNameError();
+  inp.focus();
 }
 
 // ── 초기화 ───────────────────────────────────────────────
 function resetAll() {
   if (!confirm('모든 번호를 초기화하고 처음부터 다시 시작할까요?')) return;
-  numbers    = shuffle(Array.from({length: TOTAL}, (_, i) => i + 1));
-  cardCeleb  = shuffle([...ALL_CELEBS]);
-  revealed   = new Array(TOTAL).fill(false);
-  pickCount  = 0;
-  isAnim     = false;
-  pickedLog  = [];
-  currentName = '';
+  numbers   = shuffle(Array.from({length: TOTAL}, (_, i) => i + 1));
+  cardCeleb = shuffle([...ALL_CELEBS]);
+  revealed  = new Array(TOTAL).fill(false);
+  pickCount = 0;
+  isAnim    = false;
+  pickedLog = [];
+  document.getElementById('remaining-count').textContent = TOTAL;
+  document.getElementById('picked-chips').innerHTML = '';
   document.getElementById('done-banner').style.display = 'none';
+  const inp = document.getElementById('name-input');
+  inp.value = ''; clearNameError(); inp.focus();
   stopConfetti();
   buildGrid();
-  showNameScreen();
 }
 
 // ── 드럼롤 ───────────────────────────────────────────────
 function playDrumRoll(durationMs, callback) {
-  const ctx   = getAudioCtx();
+  const ctx = getAudioCtx();
   const endAt = ctx.currentTime + durationMs / 1000;
   let t = ctx.currentTime + 0.05, interval = 0.30;
   while (t < endAt) {
-    const progress = (t - ctx.currentTime) / (durationMs / 1000);
-    snareHit(ctx, t, 0.12 + progress * 0.32);
+    snareHit(ctx, t, 0.12 + ((t - ctx.currentTime) / (durationMs / 1000)) * 0.32);
     interval = Math.max(0.038, interval * 0.905);
     t += interval;
   }
   kickHit(ctx, endAt - 0.04);
   setTimeout(callback, durationMs);
 }
-
 function snareHit(ctx, time, vol) {
   const size = Math.floor(ctx.sampleRate * 0.09);
   const buf  = ctx.createBuffer(1, size, ctx.sampleRate);
   const data = buf.getChannelData(0);
   for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
-  const src  = ctx.createBufferSource(); src.buffer = buf;
-  const hp   = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1600;
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.075);
-  src.connect(hp); hp.connect(gain); gain.connect(ctx.destination);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const hp  = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1600;
+  const g   = ctx.createGain();
+  g.gain.setValueAtTime(vol, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.075);
+  src.connect(hp); hp.connect(g); g.connect(ctx.destination);
   src.start(time); src.stop(time + 0.1);
 }
-
 function kickHit(ctx, time) {
-  const osc = ctx.createOscillator(), gain = ctx.createGain();
+  const osc = ctx.createOscillator(), g = ctx.createGain();
   osc.type = 'sine';
   osc.frequency.setValueAtTime(160, time);
   osc.frequency.exponentialRampToValueAtTime(40, time + 0.18);
-  gain.gain.setValueAtTime(1.2, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
-  osc.connect(gain); gain.connect(ctx.destination);
+  g.gain.setValueAtTime(1.2, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
+  osc.connect(g); g.connect(ctx.destination);
   osc.start(time); osc.stop(time + 0.32);
 }
 
@@ -700,19 +589,18 @@ function kickHit(ctx, time) {
 function playFanfare() {
   const ctx = getAudioCtx(), now = ctx.currentTime;
   [{f:261.63,t:0.00,d:0.22},{f:329.63,t:0.18,d:0.22},{f:392.00,t:0.34,d:0.22},{f:523.25,t:0.50,d:0.65}]
-    .forEach(({f,t,d}) => tone(ctx, f, now+t, d, 0.38, 'sawtooth'));
-  [523.25,659.25,783.99].forEach(f => tone(ctx, f, now+0.58, 1.0, 0.22, 'sawtooth'));
-  [1046.5,1318.5,1567.98].forEach((f,i) => tone(ctx, f, now+0.60+i*0.07, 0.45, 0.07, 'sine'));
+    .forEach(({f,t,d}) => tone(ctx,f,now+t,d,0.38,'sawtooth'));
+  [523.25,659.25,783.99].forEach(f => tone(ctx,f,now+0.58,1.0,0.22,'sawtooth'));
+  [1046.5,1318.5,1567.98].forEach((f,i) => tone(ctx,f,now+0.60+i*0.07,0.45,0.07,'sine'));
 }
-
 function tone(ctx, freq, start, dur, vol, type) {
-  const osc = ctx.createOscillator(), gain = ctx.createGain();
+  const osc = ctx.createOscillator(), g = ctx.createGain();
   osc.type = type; osc.frequency.value = freq;
-  gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(vol, start + 0.03);
-  gain.gain.setValueAtTime(vol, start + dur * 0.72);
-  gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
-  osc.connect(gain); gain.connect(ctx.destination);
+  g.gain.setValueAtTime(0, start);
+  g.gain.linearRampToValueAtTime(vol, start + 0.03);
+  g.gain.setValueAtTime(vol, start + dur * 0.72);
+  g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+  osc.connect(g); g.connect(ctx.destination);
   osc.start(start); osc.stop(start + dur + 0.05);
 }
 
@@ -720,22 +608,21 @@ function tone(ctx, freq, start, dur, vol, type) {
 const cvs = document.getElementById('confetti-canvas');
 const cctx = cvs.getContext('2d');
 let parts = [], rafId = null;
-const CONF_COLORS = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF922B','#CC5DE8','#FFA94D','#69DB7C'];
+const CC = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF922B','#CC5DE8','#FFA94D','#69DB7C'];
 
 function launchConfetti() {
   cvs.width = window.innerWidth; cvs.height = window.innerHeight;
   parts = Array.from({length: 200}, () => ({
     x: Math.random() * cvs.width,
-    y: Math.random() * cvs.height * 0.35 - cvs.height * 0.15,
-    w: Math.random() * 11 + 6, h: Math.random() * 5 + 3,
-    color: CONF_COLORS[Math.floor(Math.random() * CONF_COLORS.length)],
+    y: Math.random() * cvs.height * 0.3 - cvs.height * 0.1,
+    w: Math.random() * 11 + 5, h: Math.random() * 5 + 3,
+    color: CC[Math.floor(Math.random() * CC.length)],
     vx: (Math.random()-0.5)*5, vy: Math.random()*4+1.5,
     angle: Math.random()*Math.PI*2, spin: (Math.random()-0.5)*0.18, life: 1,
   }));
   if (rafId) cancelAnimationFrame(rafId);
   animConf();
 }
-
 function animConf() {
   cctx.clearRect(0, 0, cvs.width, cvs.height);
   parts.forEach(p => {
@@ -752,16 +639,13 @@ function animConf() {
   if (parts.length) rafId = requestAnimationFrame(animConf);
   else cctx.clearRect(0, 0, cvs.width, cvs.height);
 }
-
 function stopConfetti() {
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   cctx.clearRect(0, 0, cvs.width, cvs.height);
   parts = [];
 }
 
-// ── 시작 ─────────────────────────────────────────────────
 buildGrid();
-showNameScreen();
 </script>
 </body>
 </html>
