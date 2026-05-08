@@ -341,6 +341,63 @@
     }
 
     #confetti-canvas { position: fixed; inset: 0; z-index: 190; pointer-events: none; }
+
+    /* ── 비밀번호 모달 ─────────────────────────────── */
+    .pw-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 400; align-items: center; justify-content: center;
+    }
+    .pw-overlay.active { display: flex; }
+
+    .pw-box {
+      background: #1a2a50;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 28px 32px;
+      width: 300px;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      animation: boxPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+    .pw-title {
+      font-size: 15px; font-weight: bold;
+      color: rgba(255,255,255,0.85); letter-spacing: 1px;
+    }
+    .pw-input-wrap { position: relative; width: 100%; }
+    #pw-input {
+      width: 100%; padding: 11px 16px;
+      font-size: 20px; letter-spacing: 6px; text-align: center;
+      font-family: inherit; font-weight: bold;
+      background: rgba(255,255,255,0.08);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 10px; color: #fff; outline: none;
+      transition: border-color 0.2s;
+    }
+    #pw-input:focus { border-color: rgba(255,255,255,0.55); }
+    #pw-input.pw-error { border-color: #f87171; }
+    .pw-hint {
+      font-size: 12px; color: #fca5a5;
+      min-height: 16px; text-align: center;
+    }
+    .pw-btns {
+      display: flex; gap: 10px; width: 100%;
+    }
+    .pw-btns button {
+      flex: 1; padding: 10px;
+      border-radius: 10px; border: none;
+      font-family: inherit; font-size: 14px; font-weight: bold;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .pw-btn-cancel {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.5);
+    }
+    .pw-btn-cancel:hover { background: rgba(255,255,255,0.14); }
+    .pw-btn-ok {
+      background: #1c3faa; color: #fff;
+    }
+    .pw-btn-ok:hover { background: #1438c8; }
   </style>
 </head>
 <body>
@@ -376,7 +433,7 @@
 
 <div class="bottom-bar">
   <div class="picked-chips" id="picked-chips"></div>
-  <a href="results.html" target="_blank" class="btn-results">결과 확인 →</a>
+  <button class="btn-results" onclick="openResults()">결과 확인 →</button>
   <button class="btn-reset" onclick="resetAll()">처음부터 다시</button>
 </div>
 
@@ -388,6 +445,23 @@
     <div class="r-name" id="r-name"></div>
     <div class="r-sub"  id="r-sub"></div>
     <button class="btn-confirm" onclick="closeReveal()">확인</button>
+  </div>
+</div>
+
+<!-- 비밀번호 모달 -->
+<div class="pw-overlay" id="pw-overlay">
+  <div class="pw-box">
+    <div class="pw-title">🔒 비밀번호 입력</div>
+    <div class="pw-input-wrap">
+      <input type="password" id="pw-input" maxlength="10" placeholder="••••"
+             oninput="document.getElementById('pw-hint').textContent=''; this.classList.remove('pw-error')"
+             onkeydown="if(event.key==='Enter') confirmPw()">
+    </div>
+    <div class="pw-hint" id="pw-hint"></div>
+    <div class="pw-btns">
+      <button class="pw-btn-cancel" onclick="cancelPw()">취소</button>
+      <button class="pw-btn-ok" onclick="confirmPw()">확인</button>
+    </div>
   </div>
 </div>
 
@@ -659,8 +733,46 @@ function closeReveal() {
   inp.focus();
 }
 
+// ── 비밀번호 모달 ────────────────────────────────────────
+const PW = '2580';
+let pwCallback = null;
+
+function askPassword(callback) {
+  pwCallback = callback;
+  const inp = document.getElementById('pw-input');
+  inp.value = '';
+  inp.classList.remove('pw-error');
+  document.getElementById('pw-hint').textContent = '';
+  document.getElementById('pw-overlay').classList.add('active');
+  setTimeout(() => inp.focus(), 50);
+}
+
+function confirmPw() {
+  const val = document.getElementById('pw-input').value;
+  if (val === PW) {
+    document.getElementById('pw-overlay').classList.remove('active');
+    if (pwCallback) { const cb = pwCallback; pwCallback = null; cb(); }
+  } else {
+    const inp = document.getElementById('pw-input');
+    inp.classList.add('pw-error');
+    inp.value = '';
+    inp.focus();
+    document.getElementById('pw-hint').textContent = '비밀번호가 틀렸습니다.';
+  }
+}
+
+function cancelPw() {
+  document.getElementById('pw-overlay').classList.remove('active');
+  pwCallback = null;
+}
+
+function openResults() {
+  askPassword(() => window.open('results.html', '_blank'));
+}
+
 // ── 전체 초기화 ──────────────────────────────────────────
 async function resetAll() {
+  askPassword(async () => {
   if (!confirm('모든 번호를 초기화하고 처음부터 다시 시작할까요?')) return;
 
   // 리스너 제거
@@ -678,6 +790,7 @@ async function resetAll() {
   const snapshot = await gameRef.child('cards').once('value');
   buildGrid(snapshot.val());
   listenCards();
+  }); // askPassword 콜백 끝
 }
 
 // ── 드럼롤 ───────────────────────────────────────────────
