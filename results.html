@@ -223,33 +223,34 @@
 
 <div class="list-wrap" id="list-wrap"></div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 <script>
 const TOTAL = 30;
 
-function load() {
-  const raw  = localStorage.getItem('speech_order_results');
-  const log  = raw ? JSON.parse(raw) : [];
+const firebaseConfig = {
+  apiKey: "AIzaSyAm6-zHyAZBdWBbuWn4V4yUCOSrnz3VeHk",
+  authDomain: "speech-order-42b14.firebaseapp.com",
+  databaseURL: "https://speech-order-42b14-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "speech-order-42b14",
+  storageBucket: "speech-order-42b14.firebasestorage.app",
+  messagingSenderId: "1095137752007",
+  appId: "1:1095137752007:web:a3da3ff1e107508530dfe2"
+};
 
-  // number → {name, celeb} 맵
-  const map = {};
-  log.forEach(p => { map[p.number] = { name: p.name, celeb: p.celeb || '' }; });
+firebase.initializeApp(firebaseConfig);
+const db      = firebase.database();
+const gameRef = db.ref('speech_order');
 
-  const filled = log.length;
-  const pct    = Math.round((filled / TOTAL) * 100);
-
-  // 상태 텍스트
-  document.getElementById('status-text').textContent =
-    filled === 0  ? '아직 아무도 뽑지 않았어요' :
-    filled === TOTAL ? '🎉 모두 완료!' :
-    `${filled}명 완료 · ${TOTAL - filled}명 남음`;
-
-  document.getElementById('progress-fill').style.width  = pct + '%';
-  document.getElementById('progress-label').textContent = `${filled} / ${TOTAL}명 완료`;
-
-  // 목록 렌더
+function render(cards) {
   const wrap = document.getElementById('list-wrap');
 
-  if (filled === 0) {
+  if (!cards) {
+    document.getElementById('status-text').textContent   = '아직 아무도 뽑지 않았어요';
+    document.getElementById('progress-fill').style.width = '0%';
+    document.getElementById('progress-label').textContent = `0 / ${TOTAL}명 완료`;
     wrap.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">📋</div>
@@ -258,7 +259,24 @@ function load() {
     return;
   }
 
-  wrap.innerHTML = Array.from({length: TOTAL}, (_, i) => {
+  // number → {name, celebName} 맵
+  const map = {};
+  Object.values(cards).forEach(c => {
+    if (c.taken) map[c.number] = { name: c.name, celeb: c.celebName || '' };
+  });
+
+  const filled = Object.keys(map).length;
+  const pct    = Math.round((filled / TOTAL) * 100);
+
+  document.getElementById('status-text').textContent =
+    filled === 0     ? '아직 아무도 뽑지 않았어요' :
+    filled === TOTAL ? '🎉 모두 완료!' :
+    `${filled}명 완료 · ${TOTAL - filled}명 남음`;
+
+  document.getElementById('progress-fill').style.width   = pct + '%';
+  document.getElementById('progress-label').textContent  = `${filled} / ${TOTAL}명 완료`;
+
+  wrap.innerHTML = Array.from({ length: TOTAL }, (_, i) => {
     const num  = i + 1;
     const info = map[num];
     if (info) {
@@ -282,9 +300,10 @@ function load() {
   }).join('');
 }
 
-// 3초마다 자동 갱신
-load();
-setInterval(load, 3000);
+// Firebase 실시간 리스너 (3초 폴링 → 즉시 반영)
+gameRef.child('cards').on('value', snapshot => {
+  render(snapshot.val());
+});
 </script>
 </body>
 </html>
