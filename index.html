@@ -670,42 +670,37 @@ async function onPick(idx, cardEl) {
   if (!name) return;
 
   isAnim = true;
-  cardEl.classList.add('picking');
 
-  playDrumRoll(2400, async () => {
-    cardEl.classList.remove('picking');
+  let cardData = null;
+  try {
+    const result = await gameRef.child(`cards/${idx}`).transaction(current => {
+      if (!current || current.taken) return undefined; // 이미 선택됨 → abort
+      return { ...current, taken: true, name };
+    });
 
-    let cardData = null;
-    try {
-      const result = await gameRef.child(`cards/${idx}`).transaction(current => {
-        if (!current || current.taken) return undefined; // 이미 선택됨 → abort
-        return { ...current, taken: true, name };
-      });
-
-      if (!result.committed) {
-        isAnim = false;
-        alert('이미 다른 학생이 선택한 카드입니다!\n다른 카드를 선택해주세요.');
-        return;
-      }
-      cardData = result.snapshot.val();
-    } catch (e) {
-      console.error(e);
+    if (!result.committed) {
       isAnim = false;
-      alert('오류가 발생했습니다. 다시 시도해주세요.');
+      alert('이미 다른 학생이 선택한 카드입니다!\n다른 카드를 선택해주세요.');
       return;
     }
+    cardData = result.snapshot.val();
+  } catch (e) {
+    console.error(e);
+    isAnim = false;
+    alert('오류가 발생했습니다. 다시 시도해주세요.');
+    return;
+  }
 
-    cardEl.classList.add('flipped', 'done');
-    document.getElementById(`fn-${idx}`).textContent  = cardData.number;
-    document.getElementById(`fna-${idx}`).textContent = name;
+  cardEl.classList.add('flipped', 'done');
+  document.getElementById(`fn-${idx}`).textContent  = cardData.number;
+  document.getElementById(`fna-${idx}`).textContent = name;
 
-    setTimeout(() => {
-      showReveal(cardData.number, name, { src: cardData.celebSrc, name: cardData.celebName });
-      playFanfare();
-      launchConfetti();
-      isAnim = false;
-    }, 420);
-  });
+  setTimeout(() => {
+    showReveal(cardData.number, name, { src: cardData.celebSrc, name: cardData.celebName });
+    playFanfare();
+    launchConfetti();
+    isAnim = false;
+  }, 420);
 }
 
 // ── 오버레이 ─────────────────────────────────────────────
