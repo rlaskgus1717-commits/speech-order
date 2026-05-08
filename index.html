@@ -18,6 +18,24 @@
       overflow: hidden;
     }
 
+    /* ── 로딩 오버레이 ─────────────────────────────── */
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(6,14,32,0.96);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999;
+      flex-direction: column; gap: 14px;
+    }
+    #loading-overlay .spin {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #7dd3fc;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-overlay p { font-size: 14px; color: rgba(255,255,255,0.5); }
+
     /* ── 헤더 ──────────────────────────────────────── */
     header {
       flex-shrink: 0;
@@ -31,7 +49,7 @@
       opacity: 0.75;
     }
 
-    /* ── 이름 입력 바 ────────────────────────────── */
+    /* ── 이름 입력 바 ────────────────────────── */
     .name-bar {
       flex-shrink: 0;
       display: flex;
@@ -146,7 +164,6 @@
       align-items: center; justify-content: center;
     }
 
-    /* 뒷면 — 연예인 사진 */
     .card-back {
       background: #1c2f5e;
       box-shadow: 0 3px 10px rgba(0,0,0,0.4);
@@ -168,7 +185,6 @@
       font-weight: bold; color: #fff;
     }
 
-    /* 앞면 — 번호 */
     .card-front {
       background: #fff;
       transform: rotateY(180deg);
@@ -185,7 +201,6 @@
       text-overflow: ellipsis; text-align: center;
     }
 
-    /* 선택 중 글로우 */
     .card.picking { animation: card-bounce 0.4s ease-in-out infinite; pointer-events: none; }
     .card.picking .card-back {
       box-shadow: 0 0 0 3px #ffd700, 0 0 20px 6px rgba(255,215,0,0.4), 0 6px 20px rgba(0,0,0,0.5);
@@ -195,7 +210,7 @@
       50%       { transform: translateY(-6px) scale(1.05); }
     }
 
-    /* ── 하단 (뽑은 학생 + 초기화) ──────────────── */
+    /* ── 하단 ──────────────────────────────────────── */
     .bottom-bar {
       flex-shrink: 0;
       padding: 4px 14px 10px;
@@ -330,6 +345,12 @@
 </head>
 <body>
 
+<!-- 로딩 화면 -->
+<div id="loading-overlay">
+  <div class="spin"></div>
+  <p>불러오는 중...</p>
+</div>
+
 <header>
   <h1>화법과 작문 — 연설 순서 뽑기</h1>
 </header>
@@ -373,7 +394,27 @@
 <div class="done-banner" id="done-banner">🎉 모두 순서를 뽑았습니다!</div>
 <canvas id="confetti-canvas"></canvas>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 <script>
+// ── Firebase 설정 ────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAm6-zHyAZBdWBbuWn4V4yUCOSrnz3VeHk",
+  authDomain: "speech-order-42b14.firebaseapp.com",
+  databaseURL: "https://speech-order-42b14-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "speech-order-42b14",
+  storageBucket: "speech-order-42b14.firebasestorage.app",
+  messagingSenderId: "1095137752007",
+  appId: "1:1095137752007:web:a3da3ff1e107508530dfe2"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db      = firebase.database();
+const gameRef = db.ref('speech_order');
+
+// ── 상수 & 전역 ──────────────────────────────────────────
 const TOTAL = 30;
 
 const ALL_CELEBS = [
@@ -396,7 +437,7 @@ const ALL_CELEBS = [
   { src: 'images/신유.jpg',   name: '신유'   },
   { src: 'images/앤톤.jpg',   name: '앤톤'   },
   { src: 'images/연준.jpg',   name: '연준'   },
-  { src: 'images/변우석.jpg',   name: '변우석'   },
+  { src: 'images/변우석.jpg', name: '변우석' },
   { src: 'images/원빈.jpg',   name: '원빈'   },
   { src: 'images/원필.jpg',   name: '원필'   },
   { src: 'images/유우시.jpg', name: '유우시' },
@@ -409,18 +450,16 @@ const ALL_CELEBS = [
   { src: 'images/희승.jpg',   name: '희승'   },
 ];
 
-let numbers   = shuffle(Array.from({length: TOTAL}, (_, i) => i + 1));
-let cardCeleb = shuffle([...ALL_CELEBS]);
-let revealed  = new Array(TOTAL).fill(false);
-let pickCount = 0;
 let isAnim    = false;
+let pickCount = 0;
 let audioCtx  = null;
-let pickedLog = [];
 
+// ── 유틸 ────────────────────────────────────────────────
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
 }
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -430,83 +469,164 @@ function shuffle(arr) {
   return a;
 }
 
-// ── 이름 검사 ────────────────────────────────────────────
 function checkName() {
   const val = document.getElementById('name-input').value.trim();
   if (val) return val;
-
   const inp = document.getElementById('name-input');
   inp.classList.remove('shake');
   inp.classList.add('error');
-  void inp.offsetWidth; // reflow for re-trigger
+  void inp.offsetWidth;
   inp.classList.add('shake');
   document.getElementById('name-hint').textContent = '이름을 먼저 입력해주세요.';
   inp.focus();
   return null;
 }
+
 function clearNameError() {
   document.getElementById('name-input').classList.remove('error');
   document.getElementById('name-hint').textContent = '';
 }
 
+// ── Firebase 초기화 ──────────────────────────────────────
+// 처음 접속한 학생(또는 선생님)이 카드 배치를 생성.
+// 동시 접속 시 transaction으로 한 명만 초기화 담당.
+async function ensureInitialized() {
+  return new Promise((resolve, reject) => {
+    gameRef.child('initialized').transaction(
+      current => (!current ? true : undefined),
+      (error, committed) => {
+        if (error) { reject(error); return; }
+        if (committed) {
+          const nums   = shuffle(Array.from({ length: TOTAL }, (_, i) => i + 1));
+          const celebs = shuffle([...ALL_CELEBS]);
+          const cards  = {};
+          for (let i = 0; i < TOTAL; i++) {
+            cards[String(i)] = {
+              number:    nums[i],
+              celebSrc:  celebs[i].src,
+              celebName: celebs[i].name,
+              taken:     false,
+              name:      null
+            };
+          }
+          gameRef.child('cards').set(cards).then(resolve).catch(reject);
+        } else {
+          resolve();
+        }
+      }
+    );
+  });
+}
+
 // ── 그리드 생성 ──────────────────────────────────────────
-function buildGrid() {
+function buildGrid(cardsData) {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
+  let taken = 0;
+
   for (let i = 0; i < TOTAL; i++) {
-    const celeb = cardCeleb[i];
-    const card  = document.createElement('div');
-    card.className = 'card' + (revealed[i] ? ' flipped done' : '');
-    card.innerHTML = `
+    const card   = cardsData[String(i)];
+    if (card.taken) taken++;
+
+    const cardEl = document.createElement('div');
+    cardEl.className   = 'card' + (card.taken ? ' flipped done' : '');
+    cardEl.dataset.idx = String(i);
+    cardEl.innerHTML   = `
       <div class="card-inner">
         <div class="card-front">
-          <div class="f-num"  id="fn-${i}"></div>
-          <div class="f-name" id="fna-${i}"></div>
+          <div class="f-num"  id="fn-${i}">${card.taken ? card.number : ''}</div>
+          <div class="f-name" id="fna-${i}">${card.taken && card.name ? card.name : ''}</div>
         </div>
         <div class="card-back">
-          <img src="${celeb.src}" alt="${celeb.name}" loading="lazy">
-          <div class="name-bar-inner">${celeb.name}</div>
+          <img src="${card.celebSrc}" alt="${card.celebName}" loading="lazy">
+          <div class="name-bar-inner">${card.celebName}</div>
         </div>
       </div>`;
-    if (revealed[i]) {
-      document.getElementById && setTimeout(() => {
-        const fn = document.getElementById(`fn-${i}`);
-        if (fn) fn.textContent = numbers[i];
-      }, 0);
-    }
-    card.addEventListener('click', () => onPick(i, card));
-    grid.appendChild(card);
+    grid.appendChild(cardEl);
   }
+
+  document.getElementById('remaining-count').textContent = TOTAL - taken;
+  pickCount = taken;
+  renderChipsFromData(cardsData);
+}
+
+// ── 실시간 리스너 ────────────────────────────────────────
+function listenCards() {
+  // 다른 학생이 카드를 선택하면 즉시 뒤집기
+  gameRef.child('cards').on('child_changed', snapshot => {
+    const idx  = Number(snapshot.key);
+    const card = snapshot.val();
+    if (!card.taken) return;
+
+    const cardEl = document.querySelector(`[data-idx="${idx}"]`);
+    if (cardEl && !cardEl.classList.contains('flipped')) {
+      cardEl.classList.add('flipped', 'done');
+      document.getElementById(`fn-${idx}`).textContent  = card.number;
+      document.getElementById(`fna-${idx}`).textContent = card.name || '';
+    }
+  });
+
+  // 남은 번호 & 칩 업데이트
+  gameRef.child('cards').on('value', snapshot => {
+    const cards = snapshot.val();
+    if (!cards) return;
+    const taken = Object.values(cards).filter(c => c.taken).length;
+    document.getElementById('remaining-count').textContent = TOTAL - taken;
+    pickCount = taken;
+    renderChipsFromData(cards);
+  });
+}
+
+// ── 칩 렌더 ─────────────────────────────────────────────
+function renderChipsFromData(cards) {
+  const log = Object.values(cards)
+    .filter(c => c.taken && c.name)
+    .sort((a, b) => a.number - b.number);
+  document.getElementById('picked-chips').innerHTML = log.map(p =>
+    `<div class="chip"><span class="chip-num">${p.number}</span>${p.name}</div>`
+  ).join('');
 }
 
 // ── 카드 선택 ────────────────────────────────────────────
-function onPick(idx, card) {
-  if (isAnim || revealed[idx]) return;
+async function onPick(idx, cardEl) {
+  if (isAnim) return;
+  if (cardEl.classList.contains('done') || cardEl.classList.contains('picking')) return;
+
   const name = checkName();
   if (!name) return;
+
   isAnim = true;
+  cardEl.classList.add('picking');
 
-  const num   = numbers[idx];
-  const celeb = cardCeleb[idx];
+  playDrumRoll(2400, async () => {
+    cardEl.classList.remove('picking');
 
-  card.classList.add('picking');
+    let cardData = null;
+    try {
+      const result = await gameRef.child(`cards/${idx}`).transaction(current => {
+        if (!current || current.taken) return undefined; // 이미 선택됨 → abort
+        return { ...current, taken: true, name };
+      });
 
-  playDrumRoll(2400, () => {
-    card.classList.remove('picking');
-    card.classList.add('flipped', 'done');
-    revealed[idx] = true;
-    pickCount++;
+      if (!result.committed) {
+        isAnim = false;
+        alert('이미 다른 학생이 선택한 카드입니다!\n다른 카드를 선택해주세요.');
+        return;
+      }
+      cardData = result.snapshot.val();
+    } catch (e) {
+      console.error(e);
+      isAnim = false;
+      alert('오류가 발생했습니다. 다시 시도해주세요.');
+      return;
+    }
 
-    document.getElementById(`fn-${idx}`).textContent  = num;
+    cardEl.classList.add('flipped', 'done');
+    document.getElementById(`fn-${idx}`).textContent  = cardData.number;
     document.getElementById(`fna-${idx}`).textContent = name;
-    document.getElementById('remaining-count').textContent = TOTAL - pickCount;
-
-    pickedLog.push({ name, number: num, celeb: celeb.name });
-    saveResults();
-    renderChips();
 
     setTimeout(() => {
-      showReveal(num, name, celeb);
+      showReveal(cardData.number, name, { src: cardData.celebSrc, name: cardData.celebName });
       playFanfare();
       launchConfetti();
       isAnim = false;
@@ -514,19 +634,9 @@ function onPick(idx, card) {
   });
 }
 
-function saveResults() {
-  localStorage.setItem('speech_order_results', JSON.stringify(pickedLog));
-}
-
-function renderChips() {
-  document.getElementById('picked-chips').innerHTML = pickedLog.map(p =>
-    `<div class="chip"><span class="chip-num">${p.number}</span>${p.name}</div>`
-  ).join('');
-}
-
 // ── 오버레이 ─────────────────────────────────────────────
 function showReveal(num, name, celeb) {
-  document.getElementById('r-img').src = celeb.src;
+  document.getElementById('r-img').src  = celeb.src;
   document.getElementById('r-num').textContent  = num;
   document.getElementById('r-name').textContent = name;
   document.getElementById('r-sub').textContent  = `${num}번째 연설자로 선정되었습니다!`;
@@ -549,28 +659,30 @@ function closeReveal() {
   inp.focus();
 }
 
-// ── 초기화 ───────────────────────────────────────────────
-function resetAll() {
+// ── 전체 초기화 ──────────────────────────────────────────
+async function resetAll() {
   if (!confirm('모든 번호를 초기화하고 처음부터 다시 시작할까요?')) return;
-  numbers   = shuffle(Array.from({length: TOTAL}, (_, i) => i + 1));
-  cardCeleb = shuffle([...ALL_CELEBS]);
-  revealed  = new Array(TOTAL).fill(false);
-  pickCount = 0;
-  isAnim    = false;
-  pickedLog = [];
-  saveResults();
-  document.getElementById('remaining-count').textContent = TOTAL;
-  document.getElementById('picked-chips').innerHTML = '';
+
+  // 리스너 제거
+  gameRef.child('cards').off();
+
+  isAnim = false;
+  stopConfetti();
   document.getElementById('done-banner').style.display = 'none';
   const inp = document.getElementById('name-input');
-  inp.value = ''; clearNameError(); inp.focus();
-  stopConfetti();
-  buildGrid();
+  inp.value = '';
+  clearNameError();
+
+  await gameRef.set(null);
+  await ensureInitialized();
+  const snapshot = await gameRef.child('cards').once('value');
+  buildGrid(snapshot.val());
+  listenCards();
 }
 
 // ── 드럼롤 ───────────────────────────────────────────────
 function playDrumRoll(durationMs, callback) {
-  const ctx = getAudioCtx();
+  const ctx   = getAudioCtx();
   const endAt = ctx.currentTime + durationMs / 1000;
   let t = ctx.currentTime + 0.05, interval = 0.30;
   while (t < endAt) {
@@ -581,6 +693,7 @@ function playDrumRoll(durationMs, callback) {
   kickHit(ctx, endAt - 0.04);
   setTimeout(callback, durationMs);
 }
+
 function snareHit(ctx, time, vol) {
   const size = Math.floor(ctx.sampleRate * 0.09);
   const buf  = ctx.createBuffer(1, size, ctx.sampleRate);
@@ -594,6 +707,7 @@ function snareHit(ctx, time, vol) {
   src.connect(hp); hp.connect(g); g.connect(ctx.destination);
   src.start(time); src.stop(time + 0.1);
 }
+
 function kickHit(ctx, time) {
   const osc = ctx.createOscillator(), g = ctx.createGain();
   osc.type = 'sine';
@@ -613,6 +727,7 @@ function playFanfare() {
   [523.25,659.25,783.99].forEach(f => tone(ctx,f,now+0.58,1.0,0.22,'sawtooth'));
   [1046.5,1318.5,1567.98].forEach((f,i) => tone(ctx,f,now+0.60+i*0.07,0.45,0.07,'sine'));
 }
+
 function tone(ctx, freq, start, dur, vol, type) {
   const osc = ctx.createOscillator(), g = ctx.createGain();
   osc.type = type; osc.frequency.value = freq;
@@ -625,10 +740,10 @@ function tone(ctx, freq, start, dur, vol, type) {
 }
 
 // ── 색종이 ───────────────────────────────────────────────
-const cvs = document.getElementById('confetti-canvas');
+const cvs  = document.getElementById('confetti-canvas');
 const cctx = cvs.getContext('2d');
 let parts = [], rafId = null;
-const CC = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF922B','#CC5DE8','#FFA94D','#69DB7C'];
+const CC  = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF922B','#CC5DE8','#FFA94D','#69DB7C'];
 
 function launchConfetti() {
   cvs.width = window.innerWidth; cvs.height = window.innerHeight;
@@ -643,6 +758,7 @@ function launchConfetti() {
   if (rafId) cancelAnimationFrame(rafId);
   animConf();
 }
+
 function animConf() {
   cctx.clearRect(0, 0, cvs.width, cvs.height);
   parts.forEach(p => {
@@ -659,13 +775,38 @@ function animConf() {
   if (parts.length) rafId = requestAnimationFrame(animConf);
   else cctx.clearRect(0, 0, cvs.width, cvs.height);
 }
+
 function stopConfetti() {
   if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   cctx.clearRect(0, 0, cvs.width, cvs.height);
   parts = [];
 }
 
-buildGrid();
+// ── 이벤트 위임 (카드 클릭) ──────────────────────────────
+document.getElementById('grid').addEventListener('click', e => {
+  const cardEl = e.target.closest('.card');
+  if (!cardEl) return;
+  onPick(Number(cardEl.dataset.idx), cardEl);
+});
+
+// ── 시작 ─────────────────────────────────────────────────
+async function start() {
+  const loadingEl = document.getElementById('loading-overlay');
+  try {
+    await ensureInitialized();
+    const snapshot = await gameRef.child('cards').once('value');
+    buildGrid(snapshot.val());
+    listenCards();
+    document.getElementById('name-input').focus();
+  } catch (e) {
+    console.error('Firebase 연결 실패:', e);
+    loadingEl.innerHTML = '<p style="color:#fca5a5;text-align:center;padding:24px">Firebase 연결에 실패했습니다.<br>잠시 후 새로고침 해주세요.</p>';
+    return;
+  }
+  loadingEl.style.display = 'none';
+}
+
+start();
 </script>
 </body>
 </html>
